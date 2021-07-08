@@ -1,0 +1,81 @@
+#+Title: Plan
+* Overview
+* Priority
+** TODO [#A] Get read for next stable update
+Lot's of the config has been updated and much of it has been used for quite a
+while now and is becoming reasonable stable.
+
+Before merging to master some loose ends should be tied up, removing unnecessary
+comments, completing documentation, switching out some variables for functions,
+renaming symbols to something better.
+
+The cherry on top would be making the config a little less rigid in the way it is
+written.
+
+** TODO [#B] Add a more detailed description to this document
+Self explanatory.
+
+** TODO [#B] Fix annoying smartparens
+The current smartparens behaviour won't balance sexp when you insert a new pair,
+ie if you already have an unmatched brace ~)~ and type ~(~ to the left of that sexp,
+it will insert ~()~ instead if realizing that the sexp is already balanced out.
+
+** TODO [#B] Fix undo tree randomly exiting when reaching a branch root
+
+** TODO Create a system to open up a bunch of files when one of them is visited
+The point of this is to open up many files in one go when you visit files in a
+user-specified file "group".
+
+The motivation behind such a mechanism is to improve the usage of files that are
+compressed, encrypted, or are just generally large files.
+In all of the above cases it is extremely tedious to open all the files manually,
+especially considering cases where emacs will block the entire application whilst
+it opens, every, single, individual, file.
+This could be made asynchronously if the operation is done in bulk.
+
+This could be as simple as hooking onto or modifying the ~file-file~ function and
+checking the requested file to open against the file groups.
+This system should replace the horrifically rigid org mode setup they opens all
+files in the directory =~/org=
+
+** Unbind ~overwrite-mode~ by deafult
+overwrite mode has almost no benefits and can be easily replaced with deleting
+or killing text before typing.
+Yet at the same time it is extremely annoying when you start typing not realizing
+you accidentally hit that one exact insert key on the keyboard.
+
+* Backburner
+** TODO Hook in documentation for cemacs custom variables
+** TODO Differentiate  between temporary local files and ones that should be kept
+This is for cemacs-defdir and cemacs-deffile functions
+
+** TODO Replace all todo entries with checkboxes instead
+For people unfamiliar with org-mode its friendlier, and nicer to read.
+:P
+
+** TODO Make a dedicated debugging function for the config
+** TODO Add yasippet for fast boilerplate code and text
+In the future this could be tied in with a future project
+"boilermancer" is the current name for the project, a project which
+creates templates for boilerplate code.
+
+** TODO Create a custom function to clean up or adopt deprecated files/directories
+This is a way to periodically clean up files that are not necessary or
+no longer adhere to the new custom locations specified by this config
+file.
+
+** TODO Make a reverse pop to mark command
+pop-to-mark command is great but it's far too common to shoot past the
+desired location, and then you want to head back up the marker stack,
+but you can't
+
+** TODO Make helm swoop drop a mark
+This is actually used surprisingly often and having it drop the make
+would make pop-to-mark-command way more useful.
+
+** TODO Make an org-mode binding to set TODO to DONE and archive tag in one go
+** TODO Mode all org-mode related functions to the req-package macro
+** TODO Make the config more configurable so other people can use it
+** TODO Create a high-performance mode that disables many unnecessary functions
+** TODO Create a close-to-vanilla emacs setup, similar to ergomacs
+** TODO Globally enable and change the colour of the visible mark
