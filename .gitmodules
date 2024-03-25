@@ -1,0 +1,6 @@
+[submodule ".emacs.d/etc/global-readonly"]
+	path = .emacs.d/etc/global-readonly
+	url = https://github.com/owensys/global-readonly
+[submodule ".emacs.d/submodules/global-readonly"]
+	path = .emacs.d/submodules/global-readonly
+	url = https://github.com/owensys/global-readonly

@@ -1,7 +1,33 @@
-# Ignore everything
-*
+MIT License
+Copyright (c) 2021 Mallchad
+This source is provided with no limitations or warrenty whatsoever.
 
-#Whitelsit
-!init.el
-!icons-in-terminal.el
-!font-lock+.el
+# Ignore everything in root
+/*
+
+# Whitelsit
+# Main Project
+!.emacs.d
+!.emacs.d/*.el
+!.emacs.d/init.el
+!.emacs.d/etc/*.el
+!.emacs.d/src
+!.emacs.d/src/*.el
+!.emacs.d/resources
+!tools/
+
+# Project Root
+!README.md
+!*.md
+!*.lua
+
+# Documentation
+!doc/
+!doc/plan.org
+
+# Blacklist
+*.elc
+*~
+~*
+*#
+#*
