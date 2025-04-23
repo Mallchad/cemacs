@@ -41,5 +41,5 @@
 (when (bound-and-true-p cemacs-init-complete)
   (personal-init-hook))
 
-(provide 'personal.el)
+(provide 'personal)
 ;;; cemacs-utility.el ends here

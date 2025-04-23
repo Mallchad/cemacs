@@ -228,6 +228,7 @@ configuration see `cemacs-init-local-frame'"
    ;; UI Improvements
    display-line-numbers-current-absolute t ; Show absolute line number of current line
    display-line-numbers-type 'relative     ; Show relative line numbers for prefix args
+   switch-to-buffer-preserve-window-point nil ; Use the buffer's 'point' not the window's 'point'
 
    ;; Mode Setting
    indent-tabs-mode nil                 ; use spaces for indendation
@@ -299,8 +300,12 @@ break packages")
            )
   ;; (fset 'electric-indent-post-self-insert-function 'ignore) ;; TODO need to steal this behaviour
 
+  ;; -- Hooks --
   ;; Save recentf on every file open
   (add-hook 'find-file-hook 'recentf-save-list)
+  (add-hook 'compilation-finish-functions 'cemacs-bury-compilation)
+  (add-hook 'compilation-finish-functions 'cemacs-compilation-hook)
+
   (fset 'yes-or-no-p 'y-or-n-p )        ; Make all yes or no prompts consistent
   (fset 'overwrite-mode 'ignore)        ; Disable pain in the arse insert mode
 
@@ -351,7 +356,7 @@ break packages")
   (if (display-graphic-p)  ; Resolve inital frame configuration
       (cemacs-init-local-frame (selected-frame)))
   (load custom-file)
-  (load cemacs-personal-config-file)
+  (require 'personal)
   )
 (cemacs-early-init)
 ;; Req Package Setup
@@ -1272,6 +1277,7 @@ Argument STRING provided by compilation hooks."
   (advice-add 'centaur-tabs-adjust-buffer-order-alphabetically :around 'cemacs-ad-centaur-reorder)
   (advice-add 'centaur-tabs-adjust-buffer-order :around 'cemacs-ad-centaur-reorder)
 )
+
 (req-package company
   :commands
   (company-mode
@@ -1359,6 +1365,10 @@ Argument STRING provided by compilation hooks."
     )
   (add-hook 'csharp-mode-hook 'cemacs-csharp-mode)
   )
+
+(req-package cuda-mode
+  )
+
 (req-package dashboard
   :config
   (dashboard-setup-startup-hook)

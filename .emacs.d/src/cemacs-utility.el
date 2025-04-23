@@ -454,5 +454,38 @@ This is a slightly more safe and informative abstraction on `set'"
   (get-buffer-window buffer-or-name 'visible)
   )
 
+(defun cemacs-bury-compilation (buffer finish-type)
+  "Clear the compilation buffer offscreen if finished with no errors occured"
+  (let ((compilation-window (get-buffer-window buffer)))
+    (when (and (string-match "finished" finish-type)
+               compilation-window)
+      (with-selected-window compilation-window (quit-window))))
+  )
+
+(defun cemacs-compilation-hook (buffer finish-type)
+  "Performs several sorted compilation finished hooks
+
+- Goto first error otherwise, goto end of buffer
+- Goto end of compilation buffer"
+  (let ((compilation-window (get-buffer-window buffer))
+        (new-point nil)
+        (error-found nil))
+    (with-current-buffer buffer
+      ;; Covers case where for some reason the compilation buffer is offscreen
+      ;; This will set display the location to the buffer's point and not mangle it
+      (setq-local switch-to-buffer-preserve-window-point nil)
+
+      (setq error-found (search-forward "error:" nil :noerror)
+            new-point error-found)
+      (when (not error-found)
+        (setq new-point (point-max)))
+      (goto-char new-point)
+
+      ;; Buffer is onscreen
+      (when compilation-window
+        (set-window-point compilation-window new-point))
+      ))
+  )
+
 (provide 'cemacs-utility)
 ;;; cemacs-utility.el ends here
