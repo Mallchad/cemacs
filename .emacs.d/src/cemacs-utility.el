@@ -459,7 +459,9 @@ This is a slightly more safe and informative abstraction on `set'"
   (let ((compilation-window (get-buffer-window buffer)))
     (when (and (string-match "finished" finish-type)
                compilation-window)
-      (with-selected-window compilation-window (quit-window))))
+      (when (not (eq (selected-window) compilation-window))
+        (with-selected-window compilation-window (quit-window))))
+    )
   )
 
 (defun cemacs-compilation-hook (buffer finish-type)

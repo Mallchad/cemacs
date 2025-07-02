@@ -78,8 +78,10 @@
                     first c-lineup-2nd-brace-entry-in-arglist c-lineup-class-decl-init-+ +)
                    (statement-cont . 0)
                    (inline-open . 0)
-                   (case-label . +)))
-                :use-style)
+                   (case-label . +)
+                   (arglist-close . 0)
+                   )))
+  (c-set-style "stroustrup")
   )
 (add-hook 'c++-mode-hook 'cemacs-cpp-mode)
 (add-hook 'c-mode-hook 'cemacs-cpp-mode)
@@ -124,7 +126,7 @@
   ;; Disable multi-byte characters in programming buffers, it is largely used
   ;; for trolling and nothing productive. Programming is typically done in
   ;; English ASCII anyway.
-  (toggle-enable-multibyte-characters -1)
+  ;; (toggle-enable-multibyte-characters -1)
   (xref-etags-mode)
   )
 (add-hook 'prog-mode-hook 'cemacs-prog-mode)
@@ -219,11 +221,12 @@ configuration see `cemacs-init-local-frame'"
    ;; I think this is causing hard locks actually causes lockups but I don't
    ;; want to give up fast-refresh. Emacs will just freeze the screen otherwise...
    ;; Okay this aparently only froze because of post-command-hooks like centaur-tabs
-   redisplay-dont-pause t               ; Prioritize drawing responsible over input processing
+   redisplay-dont-pause nil               ; Prioritize drawing responsible over input processing
 
    ;; Makes fontification and movement more performant at the cost of font-lock accuracy
    fast-but-imprecise-scrolling t
    redisplay-skip-fontification-on-input t
+   redisplay-skip-initial-frame nil     ; Maybe improve visuals with pixel draw modes
 
    ;; UI Improvements
    display-line-numbers-current-absolute t ; Show absolute line number of current line
@@ -1471,6 +1474,14 @@ This version has been patched to avoid clobbering the keyfreq file when the lisp
           )))
   )
 
+(req-package fancy-compilation
+  :hook (init-setup . fancy-compilation-mode)
+  :config
+  ;; Don't supress useful info
+  (setq fancy-compilation-quiet-prelude nil
+        fancy-compilation-quiet-prolog nil)
+  )
+
 (req-package fireplace
   :commands
   (fireplace)
@@ -1559,7 +1570,7 @@ This version has been patched to avoid clobbering the keyfreq file when the lisp
   (global-flycheck-mode . global-flycheck-inline-mode)
 
   :config
-  (setq-default flycheck-disabled-checkers '('c/c++-clang))
+  (setq-default flycheck-disabled-checkers '(c/c++-clang))
   ;; Disable highlighting, its not consistently useful, use helm-flycheck
   (setq flycheck-highlighting-mode nil
         flycheck-inline-mode t
