@@ -39,9 +39,26 @@
 
 ;; Variables
 (defvar natural-read-only-color "#1f0101"
-  "The background color to set te buffer to when in read-only mode")
+  "The background  color to  set te buffer  to when  in read-only
+  mode")
 (defvar natural--read-only-cookies ()
-  "A list of cookies generated internally to remove when read-only mode is disabled")
+  "A list of cookies generated internally to remove when read-only
+  mode is disabled")
+(defvar natural-word-reverse-superword-flag nil
+  "True if an last relevant interactive command reversed superword
+mode wih a prefix argument."
+  )
+(defvar natural-word-reverse-superword-last-command nil
+  "Last command that tried to use reverse a superword mode"
+  )
+(defvar natural-move-word-reverse-superword-flag nil
+  "True  if last  'natural-forward-word'  used  prefix argument  to
+reverse the subword-mode.")
+(defvar natural-delete-word-reverse-superword-flag nil
+  "True  if  last  'natural-delete-word' used  prefix  argument  to
+reverse the subword-mode.  Words for either forwards or backwards
+varients")
+
 
 
 (defmacro natural-excursion (&rest form)
@@ -176,7 +193,8 @@ This function is effectively a shorthand of 'mark-defun' 'kill-region'."
   (mark-defun)
   (kill-region (region-beginning) (region-end))
   )
-(defun natural-forward-word ()
+
+(defun natural-forward-word (&optional arg)
   "Move the point 1 word block forwards, treating whitespace blocks as words.
 
 This is designed to have funcitonality closer to other common editor's
@@ -199,26 +217,66 @@ A call only 1 character away from a 'word' object  will result in 'normal' EMACS
  word deletion.
 In fact, this uses a custom word deletion function, so as to not pollute the
 kill ring."
-  (interactive)
-  (let ((original-point (point))
-        (following-two-chars-blank
-         (and (string-match "[[:blank:]]" (string (char-after)))
-              (string-match "[[:blank:]]" (string (char-after (+ (point) 1)))))
-         ))
-    (cond ((= (line-end-position) (point))
-           (natural-forward-whitespace :traverse-newlines)
-           )
-          ((or following-two-chars-blank (= ?\t (following-char)))
-           (natural-forward-whitespace)
-           )
-          ;; Normal backward word
-          (:default (forward-word 1))
-          )
-    ;; Keep the point inside an input field where applicable
-    (constrain-to-field nil (point))
-    (point))
+  (interactive "P")
+  (let ((arg-count)
+        (original-point nil)
+        (following-two-chars-blank nil)
+        ;; Allow overriding superword mode during motions
+        ;; Have to use superword because superword var is ignored
+        (superword-mode superword-mode)
+        (original-superword-mode superword-mode))
+
+    ;; default-argument
+    (if (numberp arg)
+        (setq arg-count arg)
+      ;; else
+      (setq arg-count 1))
+
+    ;; Interactive only
+    (when (called-interactively-p)
+      (when (and (equal last-command 'natural-forward-word)
+                 natural-word-reverse-superword-flag)
+        (setq superword-mode (not original-superword-mode)))
+
+      ;; if is a repeat command use flip the 'superword-mode' based on the reverse flag
+      (if (equal last-command 'natural-forward-word)
+          (setq natural-word-reverse-superword-flag t)
+        ;; else
+        (setq natural-word-reverse-superword-flag nil))
+
+      ;; Flip 'superword-mode' when universal prefix is active and override previous flag settings
+      (when (equal arg cemacs-universal-argument)
+        (setq superword-mode (not original-superword-mode))
+        (setq natural-word-reverse-superword-flag t)
+        )
+
+      ;; Record most recently used interactive command with subword reversal
+      (setq natural-word-reverse-superword-last-command 'natural-forward-word)
+      )
+
+    (cl-loop repeat arg-count do
+             (setq original-point (point)
+                   following-two-chars-blank
+                   (and (string-match "[[:blank:]]" (string (char-after)))
+                        (string-match "[[:blank:]]" (string (char-after (+ (point) 1)))))
+                   )
+
+             (cond ((= (line-end-position) (point))
+                    (natural-forward-whitespace :traverse-newlines)
+                    )
+                   ((or following-two-chars-blank (= ?\t (following-char)))
+                    (natural-forward-whitespace)
+                    )
+                   ;; Normal backward word
+                   (:default (forward-word 1))
+                   )
+             ;; Keep the point inside an input field where applicable
+             (constrain-to-field nil (point))
+             (point))
+    )
   )
-(defun natural-backward-word ()
+
+(defun natural-backward-word (&optional arg)
   "Move the point 1 word block backwards, treating whitespace blocks as words.
 
 This is designed to have funcitonality closer to other common editor's
@@ -244,34 +302,74 @@ the `backwards-to-word' command.
 This will also attempt to prevent traversing read-only prompt text
 This will also move the cursor to the beginning of the line if travesing
 lines."
-  (interactive)
-  (let ((original-point (point))
-        (original-line (line-number-at-pos (point)))
-        (previous-two-chars-blank
-         (and (string-match "[[:blank:]]" (string (char-before)))
-              (string-match "[[:blank:]]" (string (char-before (- (point) 1))))))
+  (interactive "P")
+  (let ((arg-count)
+        (original-point)
+        (original-line)
+        (previous-two-chars-blank)
+        ;; Allow overriding superword mode during motions
+        ;; Have to use superword because superword var is ignored
+        (superword-mode superword-mode)
+        (original-superword-mode superword-mode))
+
+    ;; default-arg
+    (if (numberp arg)
+        (setq arg-count arg)
+      ;; else
+      (setq arg-count 1))
+
+    ;; Interactive only
+    (when (called-interactively-p)
+      (when (and (equal last-command 'natural-backward-word)
+                 natural-word-reverse-superword-flag)
+        (setq superword-mode (not original-superword-mode)))
+
+      ;; if is a repeat command use flip the 'superword-mode' based on the reverse flag
+      (if (equal last-command 'natural-backward-word)
+          (setq natural-word-reverse-superword-flag t)
+        ;; else
+        (setq natural-word-reverse-superword-flag nil))
+
+      ;; Flip 'superword-mode' when universal prefix is active and override previous flag settings
+      (when (equal arg cemacs-universal-argument)
+        (setq superword-mode (not original-superword-mode))
+        (setq natural-word-reverse-superword-flag t)
         )
-    ;; Delete whitespace hungrily if at line beginning across lines
-    (cond ((= (line-beginning-position) (point))
-           (natural-backward-whitespace :traverse-newlines)
-           )
-          ;; Previous two characters are whitespace/blank
-          ((or previous-two-chars-blank (= ?\t (preceding-char)))
-           ;; traverse all whitespace upto line beginning
-           (natural-backward-whitespace)
-           )
-          ;; Normal backward word
-          (:default
-           (backward-word 1)
-           (if (not (= original-line (line-number-at-pos (point))))
-               ;; Try not to move the cursor too far
-               (end-of-line))
-           ))
-    ;; Keep the point inside an input field where applicable
-    (constrain-to-field nil original-point)
-    (point)
-    ))
-(defun natural-delete-word ()
+
+      ;; Record most recently used interactive command with subword reversal
+      (setq natural-word-reverse-superword-last-command 'natural-backward-word)
+      )
+
+    (cl-loop repeat arg-count do
+             (setq original-point (point)
+                   original-line (line-number-at-pos (point))
+                   previous-two-chars-blank
+                   (and (string-match "[[:blank:]]" (string (char-before)))
+                        (string-match "[[:blank:]]" (string (char-before (- (point) 1)))))
+                   )
+             ;; Delete whitespace hungrily if at line beginning across lines
+             (cond ((= (line-beginning-position) (point))
+                    (natural-backward-whitespace :traverse-newlines)
+                    )
+                   ;; Previous two characters are whitespace/blank
+                   ((or previous-two-chars-blank (= ?\t (preceding-char)))
+                    ;; traverse all whitespace upto line beginning
+                    (natural-backward-whitespace)
+                    )
+                   ;; Normal backward word
+                   (:default
+                    (backward-word 1)
+                    (if (not (= original-line (line-number-at-pos (point))))
+                        ;; Try not to move the cursor too far
+                        (end-of-line))
+                    ))
+             ;; Keep the point inside an input field where applicable
+             (constrain-to-field nil original-point)
+             (point)
+             ))
+  )
+
+(defun natural-delete-word (&optional arg)
   "Delete a word block backwards, treating whitespace blocks as words.
 
 This is designed to have funcitonality closer to other common editor's
@@ -291,16 +389,52 @@ This version will delete all whitespace forwards when 2 or more blank/whitespace
 characters are present, or 1 newline, leaving actual characters alone.
 
 A call only 1 character away from a 'word' object  will result in 'normal' EMACS
- word deletion.
+word deletion.
 In fact, this uses a custom word deletion function, so as to not pollute the
-kill ring."
-  (interactive)
-  (let ((original-point (point)))
+kill ring.
+
+With  PREFIX `arg',  reverse  superword-mode  and change  whether
+traversing  subwords  or   superwords.  'superword-mode'  changes
+persists for repeat invocations."
+  (interactive "P")
+  (let ((original-point (point))
+        (arg-count 1)
+        ;; Allow overriding superword mode during motions
+        ;; Have to use superword because superword var is ignored
+        superword-mode superword-mode
+        original-superword-mode superword-mode)
+    (when (numberp arg)
+      (setq arg-count arg))
+
+    ;; Interactive only
+    (when (called-interactively-p)
+      (when (and (equal last-command 'natural-delete-word)
+                 natural-word-reverse-superword-flag)
+        (setq superword-mode (not original-superword-mode)))
+
+      ;; if is a repeat command use flip the 'superword-mode' based on the reverse flag
+      (if (equal last-command 'natural-delete-word)
+          (setq natural-word-reverse-superword-flag t)
+        ;; else
+        (setq natural-word-reverse-superword-flag nil))
+
+      ;; Flip 'superword-mode' when universal prefix is active and override previous flag settings
+      (when (equal arg cemacs-universal-argument)
+        (setq superword-mode (not original-superword-mode))
+        (setq natural-word-reverse-superword-flag t)
+        )
+
+      ;; Record most recently used interactive command with subword reversal
+      (setq natural-word-reverse-superword-last-command 'natural-delete-word)
+      )
+
     ;; Following two characters are whitespace/blank or end of line
-    (natural-forward-word)
-    (delete-region original-point (point)))
+    (natural-forward-word arg-count)
+    (delete-region original-point (point))
+    )
   )
-(defun natural-delete-word-backwards ()
+
+(defun natural-delete-word-backwards (arg)
   "Delete a word block backwards, treating whitespace blocks as words.
 
 This command uses `natural-backward-word' to achieve more sane deletion
@@ -310,35 +444,73 @@ characters are present, or 1 newline, leaving actual characters alone.
 
 A call only 1 character away from a 'word' object  will result in close to
 EMACS `backward-to-char' movement deleting everything between the new and
- old points."
-  (interactive)
-  (let ((original-point (point)))
-    (natural-backward-word)
-    (delete-region original-point (point)))
-  )
-(defun natural-tab-to-tab-stop ()
-  "Move following word block to the next tab stop.
+ old points.
 
-The original `tab-to-tab-stop' command has a quirk where existing
-whitespace and indentation can upset the tab stop algorithm.  But
-only  when  the  cursor  is  not next  to  the  text  immediately
-following it.
+With  PREFIX `arg',  reverse  superword-mode  and change  whether
+traversing  subwords  or   superwords.  'superword-mode'  changes
+persists for repeat invocations."
+  (interactive "P")
+  (let ((original-point (point))
+        (arg-count 1)
+        ;; Allow overriding superword mode during motions
+        ;; Have to use superword because superword var is ignored
+        superword-mode superword-mode
+        original-superword-mode superword-mode)
+    (when (numberp arg)
+      (setq arg-count arg))
+    ;; Interactive only
+    (when (called-interactively-p)
+      (when (and (equal last-command 'natural-delete-word-backwards)
+                 natural-word-reverse-superword-flag)
+        (setq superword-mode (not original-superword-mode)))
+
+      ;; if is a repeat command use flip the 'superword-mode' based on the reverse flag
+      (if (equal last-command 'natural-delete-word-backwards)
+          (setq natural-word-reverse-superword-flag t)
+        ;; else
+        (setq natural-word-reverse-superword-flag nil))
+
+      ;; Flip 'superword-mode' when universal prefix is active and override previous flag settings
+      (when (equal arg cemacs-universal-argument)
+        (setq superword-mode (not original-superword-mode))
+        (setq natural-word-reverse-superword-flag t)
+        )
+
+      ;; Record most recently used interactive command with subword reversal
+      (setq natural-word-reverse-superword-last-command 'natural-delete-word-backwards)
+      )
+    (let ((original-point (point)))
+      (natural-backward-word arg-count)
+      (delete-region original-point (point)))
+    )
+  )
+
+(defun natural-tab-to-tab-stop (arg)
+    "Move following word block to the next tab stop. Or a reset to a
+`arg' number of stops.
+
+RATIONAL:  The original  `tab-to-tab-stop'  command  has a  quirk
+where existing whitespace and indentation  can upset the tab stop
+algorithm.  But  only when  the cursor  is not  next to  the text
+immediately following it.
 
 This behaviour might have intended to move the cursor to the next
-tab  stop, relative  to the  cursor  position, since  that is  in
-effect Although,  it might  be far more  desirable and  useful to
-move  text to  tab stops  follow its  beginning, rather  than the
-cursor.
+tab  stop, relative  to the  cursor position,  since that  is the
+original effect.  Although, it  might be  far more  desirable and
+useful to  move text  to tab stops  follow its  beginning, rather
+than the cursor.
 
-The result  is that the  command will consistently move  the text
+EFFECT:   command will consistently move  the text
 immediately following  the cursor  to the  next tab  stop without
 needing to move  to the text beginning,  correcting formatting in
 the adjecent whitespace as it goes.
 
 If the point is in a line of text, it will ignore
 `indent-tabs-mode' and indent using text, correcting any previous
-in-line indentaiton as it goes."
-  (interactive)
+in-line indentaiton as it goes.
+
+With PREFIX `arg', delete "
+  (interactive "P")
   (natural-forward-whitespace)
   (let* ((last-tab-stop
           (or (car (last (indent-accumulate-tab-stops
@@ -351,16 +523,26 @@ in-line indentaiton as it goes."
          (line-first-char-pos (natural-excursion (beginning-of-line-text)))
          (text-before-point (< line-first-char-pos (point)))
          (indent-tabs-mode indent-tabs-mode))
-    ;; Reset whitespace
-    (delete-horizontal-space)
 
-    (and abbrev-mode (= (char-syntax (preceding-char)) ?w)
-         (expand-abbrev))
+    ;; Reset whitespace if numeric prefix arg is provided
+    (when (numberp arg)
+      (save-excursion
+        (delete-horizontal-space)
 
-    ;; Don't use tabs in the middle of lines
-    (when (and text-before-point indent-tabs-mode)
-      (setq indent-tabs-mode nil))
-    (indent-to next-tab-stop))
+        (and abbrev-mode (= (char-syntax (preceding-char)) ?w)
+             (expand-abbrev))
+
+        ;; Don't use tabs in the middle of lines
+        (when (and text-before-point indent-tabs-mode)
+          (setq indent-tabs-mode nil)))
+      )
+    (if (numberp arg)
+        (progn (delete-horizontal-space)
+               (cl-loop repeat arg do
+                        (indent-to (indent-next-tab-stop (current-column)))))
+      ;; else
+      (indent-to (indent-next-tab-stop (current-column)))
+      ))
   )
 
 ;; TODO
