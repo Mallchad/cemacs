@@ -224,7 +224,10 @@ kill ring."
         ;; Allow overriding superword mode during motions
         ;; Have to use superword because superword var is ignored
         (superword-mode superword-mode)
-        (original-superword-mode superword-mode))
+        (original-superword-mode superword-mode)
+        (repeat-command (or (equal last-command 'natural-forward-word)
+                            (equal last-command 'natural-backward-word)))
+        )
 
     ;; default-argument
     (if (numberp arg)
@@ -234,14 +237,12 @@ kill ring."
 
     ;; Interactive only
     (when (called-interactively-p)
-      (when (and (equal last-command 'natural-forward-word)
-                 natural-word-reverse-superword-flag)
+      (message "interactive")
+      (when (and repeat-command natural-word-reverse-superword-flag)
         (setq superword-mode (not original-superword-mode)))
 
-      ;; if is a repeat command use flip the 'superword-mode' based on the reverse flag
-      (if (equal last-command 'natural-forward-word)
-          (setq natural-word-reverse-superword-flag t)
-        ;; else
+      ;; Reset superword flag if the command changes from word move
+      (when (not repeat-command)
         (setq natural-word-reverse-superword-flag nil))
 
       ;; Flip 'superword-mode' when universal prefix is active and override previous flag settings
@@ -310,7 +311,9 @@ lines."
         ;; Allow overriding superword mode during motions
         ;; Have to use superword because superword var is ignored
         (superword-mode superword-mode)
-        (original-superword-mode superword-mode))
+        (original-superword-mode superword-mode)
+        (repeat-command (or (equal last-command 'natural-forward-word)
+                            (equal last-command 'natural-backward-word))))
 
     ;; default-arg
     (if (numberp arg)
@@ -320,14 +323,11 @@ lines."
 
     ;; Interactive only
     (when (called-interactively-p)
-      (when (and (equal last-command 'natural-backward-word)
-                 natural-word-reverse-superword-flag)
+      (when (and repeat-command natural-word-reverse-superword-flag)
         (setq superword-mode (not original-superword-mode)))
 
-      ;; if is a repeat command use flip the 'superword-mode' based on the reverse flag
-      (if (equal last-command 'natural-backward-word)
-          (setq natural-word-reverse-superword-flag t)
-        ;; else
+      ;; Reset superword flag if the command changes from word move
+      (when (and repeat-command)
         (setq natural-word-reverse-superword-flag nil))
 
       ;; Flip 'superword-mode' when universal prefix is active and override previous flag settings
@@ -401,21 +401,21 @@ persists for repeat invocations."
         (arg-count 1)
         ;; Allow overriding superword mode during motions
         ;; Have to use superword because superword var is ignored
-        superword-mode superword-mode
-        original-superword-mode superword-mode)
+        (superword-mode superword-mode)
+        (original-superword-mode superword-mode)
+        (repeat-command (or (equal last-command 'natural-delete-word)
+                            (equal last-command 'natural-delete-word-backwards)))
+        )
     (when (numberp arg)
       (setq arg-count arg))
 
     ;; Interactive only
     (when (called-interactively-p)
-      (when (and (equal last-command 'natural-delete-word)
-                 natural-word-reverse-superword-flag)
+      (when  (and repeat-command natural-word-reverse-superword-flag)
         (setq superword-mode (not original-superword-mode)))
 
-      ;; if is a repeat command use flip the 'superword-mode' based on the reverse flag
-      (if (equal last-command 'natural-delete-word)
-          (setq natural-word-reverse-superword-flag t)
-        ;; else
+      ;; Reset superword flag if the command changes from deletion
+      (when repeat-command
         (setq natural-word-reverse-superword-flag nil))
 
       ;; Flip 'superword-mode' when universal prefix is active and override previous flag settings
@@ -454,8 +454,11 @@ persists for repeat invocations."
         (arg-count 1)
         ;; Allow overriding superword mode during motions
         ;; Have to use superword because superword var is ignored
-        superword-mode superword-mode
-        original-superword-mode superword-mode)
+        (superword-mode superword-mode)
+        (original-superword-mode superword-mode)
+        (repeat-command (or (equal last-command 'natural-delete-word)
+                            (equal last-command 'natural-delete-word-backwards)))
+        )
     (when (numberp arg)
       (setq arg-count arg))
     ;; Interactive only
@@ -464,10 +467,8 @@ persists for repeat invocations."
                  natural-word-reverse-superword-flag)
         (setq superword-mode (not original-superword-mode)))
 
-      ;; if is a repeat command use flip the 'superword-mode' based on the reverse flag
-      (if (equal last-command 'natural-delete-word-backwards)
-          (setq natural-word-reverse-superword-flag t)
-        ;; else
+      ;; Reset superword flag if the command changes from deletion
+      (when repeat-command
         (setq natural-word-reverse-superword-flag nil))
 
       ;; Flip 'superword-mode' when universal prefix is active and override previous flag settings
