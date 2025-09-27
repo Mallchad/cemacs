@@ -327,7 +327,7 @@ lines."
         (setq superword-mode (not original-superword-mode)))
 
       ;; Reset superword flag if the command changes from word move
-      (when (and repeat-command)
+      (when (not repeat-command)
         (setq natural-word-reverse-superword-flag nil))
 
       ;; Flip 'superword-mode' when universal prefix is active and override previous flag settings
@@ -415,7 +415,7 @@ persists for repeat invocations."
         (setq superword-mode (not original-superword-mode)))
 
       ;; Reset superword flag if the command changes from deletion
-      (when repeat-command
+      (when (not repeat-command)
         (setq natural-word-reverse-superword-flag nil))
 
       ;; Flip 'superword-mode' when universal prefix is active and override previous flag settings
@@ -463,12 +463,11 @@ persists for repeat invocations."
       (setq arg-count arg))
     ;; Interactive only
     (when (called-interactively-p)
-      (when (and (equal last-command 'natural-delete-word-backwards)
-                 natural-word-reverse-superword-flag)
+      (when (and repeat-command natural-word-reverse-superword-flag)
         (setq superword-mode (not original-superword-mode)))
 
       ;; Reset superword flag if the command changes from deletion
-      (when repeat-command
+      (when (not repeat-command)
         (setq natural-word-reverse-superword-flag nil))
 
       ;; Flip 'superword-mode' when universal prefix is active and override previous flag settings
