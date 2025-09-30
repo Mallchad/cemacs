@@ -2516,6 +2516,10 @@ so it knows what files may be queried which helps with responsiveness.
    )
   :config
   )
+
+(req-package string-inflection
+  :demand t
+  )
 ;; (req-package sublimity
 ;;   :commands
 ;;   (sublimity-mode)
