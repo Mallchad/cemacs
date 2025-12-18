@@ -38,8 +38,11 @@
                                 personal-projectile-grouping)
 )
 (add-hook 'personal-init-hook 'cemacs-init-setup-hook)
+
+;; Manual load code
 (when (bound-and-true-p cemacs-init-complete)
-  (personal-init-hook))
+  (personal-init-hook)
+  )
 
 (provide 'personal)
 ;;; cemacs-utility.el ends here
