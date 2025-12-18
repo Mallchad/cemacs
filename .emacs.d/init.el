@@ -261,6 +261,8 @@ configuration see `cemacs-init-local-frame'"
    y-or-n-p-use-read-key t               ; allows y-or-n-p to read even if not in the minibuffer
    mouse-scroll-delay 0                  ; makes small mouse scrolls more responsive
    tags-add-tables t                     ; Stop bugging the user about adding tag tables
+   visible-bell t                        ; visible bell instead of sound bell
+   ;; ring-bell-function 'ignore            ; Stop ringing the damn bell
 
    ;; GDB Tewaks
    speedbar-use-images nil               ; This is buggy for some reason
