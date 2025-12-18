@@ -1195,44 +1195,12 @@ variables: `beacon-mode', `beacon-dont-blink-commands',
   (ignore-errors (cemacs-bind-vanilla-keys)) ; Protected from req-package error
   )
 
+;; NOTE: I don't use bury-successful-compilation anymore, it didn't really do
+;; what I wanted and had surprising behaviour, I now instead use my fully custom
+;; solution 'cemacs-bury-compilation'
+
 ;;; Minor-mode which hides the compilaton buffer if successful
-(req-package bury-successful-compilation
-  ;; Enable bury-successful-compilation mode
-  :hook (cemacs-init-setup . bury-successful-compilation)
-  :config
-  (defun bury-successful-compilation-buffer (buffer string)
-    "Bury the compilation BUFFER after a successful compile.
-Argument STRING provided by compilation hooks."
-    (setq bury-successful-compilation-save-windows
-          (and
-           (equal 'compilation-mode major-mode)
-           (string-match "finished" string)
-           (not (save-excursion (goto-line 5) (search-forward "warning" nil t))))
-          )
-    (when bury-successful-compilation-save-windows
-      (ignore-errors
-        (jump-to-register
-         bury-successful-compilation-precompile-window-state))
-      (message "Compilation successful.")))
-  (defadvice compilation-start (before
-                                bury-successful-compilation-save-windows
-                                activate)
-    "Save window configuration to
-`bury-successful-compilation-precompile-window-state' unless
-`bury-successful-compilation-save-windows' is nil."
-    (let ((save-configuration nil)
-          (visible-compilation nil)
-          )
-      (setq visible-compilation (dolist (x-buffer (buffer-list))
-                                        (when (eq 'compilation-mode major-mode)
-                                          (setq visible-compilation t)))
-            save-configuration (or (not visible-compilation)
-                                   bury-successful-compilation-save-windows))
-      (when save-configuration
-        (window-configuration-to-register
-         bury-successful-compilation-precompile-window-state))
-      ))
-  )
+;; (req-package bury-successful-compilation )
 
 ;;; A robust, prettified calender framework
 (req-package calfw
