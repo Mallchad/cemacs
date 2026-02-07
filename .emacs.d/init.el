@@ -1342,14 +1342,18 @@ It is faster and alleviates no syntax highlighting"
   :config
   )
 
-;; TODO Try again with lucid toolkit
 (req-package good-scroll
   :hook
   (cemacs-init-setup . good-scroll-mode)
+  :init
+  (defvar cemacs-good-scroll-map (make-sparse-keymap)
+    "Custom mapping layer for good-scroll-mode so we don't override normal keys")
   :bind
-  (("C-v" . good-scroll-up-full-screen)
-  ("M-v" . good-scroll-down-full-screen))
+  (:map cemacs-good-scroll-map
+        ("C-v" . good-scroll-up-full-screen)
+        ("M-v" . good-scroll-down-full-screen))
   :config
+  (add-to-list 'minor-mode-map-alist (cons 'good-scroll-mode cemacs-good-scroll-map))
  )
 (req-package helm
   :require
