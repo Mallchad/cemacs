@@ -359,6 +359,13 @@ break packages")
     )
   (define-prefix-command 'cemacs-query-prefix-map)
 
+  ;; More convenient register commands
+  (keymap-set cemacs-query-prefix-map "o" 'point-to-register)
+  (keymap-set cemacs-query-prefix-map "k" 'jump-to-register)
+  (keymap-set cemacs-query-prefix-map "C-k" 'cemacs-jump-to-register-other-window)
+
+  (advice-add 'jump-to-register :before 'cemacs-ad-jump-to-register)
+
   ;; Just prettify the frame whilst waiting for loading
   (if (display-graphic-p)  ; Resolve inital frame configuration
       (cemacs-init-local-frame (selected-frame)))

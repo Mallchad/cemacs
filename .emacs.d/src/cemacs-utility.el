@@ -489,5 +489,23 @@ This is a slightly more safe and informative abstraction on `set'"
       ))
   )
 
+(defun cemacs-jump-to-register-other-window ( register &optional delete )
+  "Same as jump-to-register but changes to the other window first.
+
+Additionally pushes the mark so you can cycle the buffer back with `pop-global-mark'"
+  (interactive (list (register-read-with-preview "Jump to register: ")
+                     current-prefix-arg))
+  ;; Set mark after changing window so they can retrieve previous location of
+  ;; that buffer, not the current one.
+  (other-window 1)
+  (push-mark-command nil)
+  (register-val-jump-to (get-register register) nil)
+  )
+
+(defun cemacs-ad-jump-to-register (&rest args)
+  "Pushes mark before `jump-to-register' so it's easier to fix mistakes with `pop-global-mark'"
+  (push-mark-command nil)
+  )
+
 (provide 'cemacs-utility)
 ;;; cemacs-utility.el ends here
