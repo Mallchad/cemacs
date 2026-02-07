@@ -127,7 +127,9 @@
   ;; for trolling and nothing productive. Programming is typically done in
   ;; English ASCII anyway.
   ;; (toggle-enable-multibyte-characters -1)
-  (xref-etags-mode)
+
+  ;; Unsupported now?
+  ;; (xref-etags-mode)
   )
 (add-hook 'prog-mode-hook 'cemacs-prog-mode)
 
@@ -425,277 +427,11 @@ break packages")
   :demand t
   :config
 
-  ;; TODO Improve logic need to improve display logic because currently its fairly random
-  (defun compilation-start (command &optional mode name-function highlight-regexp)
-  "Run compilation command COMMAND (low level interface).
-If COMMAND starts with a cd command, that becomes the `default-directory'.
-The rest of the arguments are optional; for them, nil means use the default.
-
-MODE is the major mode to set in the compilation buffer.  Mode
-may also be t meaning use `compilation-shell-minor-mode' under `comint-mode'.
-
-If NAME-FUNCTION is non-nil, call it with one argument (the mode name)
-to determine the buffer name.  Otherwise, the default is to
-reuses the current buffer if it has the proper major mode,
-else use or create a buffer with name based on the major mode.
-
-If HIGHLIGHT-REGEXP is non-nil, `next-error' will temporarily highlight
-the matching section of the visited source line; the default is to use the
-global value of `compilation-highlight-regexp'.
-
-Returns the compilation buffer created."
-  (or mode (setq mode 'compilation-mode))
-  (let* ((name-of-mode
-	  (if (eq mode t)
-	      "compilation"
-	    (replace-regexp-in-string "-mode\\'" "" (symbol-name mode))))
-	 (thisdir default-directory)
-	 (thisenv compilation-environment)
-	 outwin outbuf)
-    (with-current-buffer
-	(setq outbuf
-	      (get-buffer-create
-               (compilation-buffer-name name-of-mode mode name-function)))
-      (let ((comp-proc (get-buffer-process (current-buffer))))
-      (if comp-proc
-          (if (or (not (eq (process-status comp-proc) 'run))
-                  (eq (process-query-on-exit-flag comp-proc) nil)
-                  (yes-or-no-p
-                   (format "A %s process is running; kill it? "
-                           name-of-mode)))
-              (condition-case ()
-                  (progn
-                    (interrupt-process comp-proc)
-                    (sit-for 1)
-                    (delete-process comp-proc))
-                (error nil))
-            (error "Cannot have two processes in `%s' at once"
-                   (buffer-name)))))
-      ;; first transfer directory from where M-x compile was called
-      (setq default-directory thisdir)
-      ;; Make compilation buffer read-only.  The filter can still write it.
-      ;; Clear out the compilation buffer.
-      (let ((inhibit-read-only t)
-	    (default-directory thisdir))
-	;; Then evaluate a cd command if any, but don't perform it yet, else
-	;; start-command would do it again through the shell: (cd "..") AND
-	;; sh -c "cd ..; make"
-	(cd (cond
-             ((not (string-match "\\`\\s *cd\\(?:\\s +\\(\\S +?\\|'[^']*'\\|\"\\(?:[^\"`$\\]\\|\\\\.\\)*\"\\)\\)?\\s *[;&\n]"
-                                 command))
-              default-directory)
-             ((not (match-end 1)) "~")
-             ((eq (aref command (match-beginning 1)) ?\')
-              (substring command (1+ (match-beginning 1))
-                         (1- (match-end 1))))
-             ((eq (aref command (match-beginning 1)) ?\")
-              (replace-regexp-in-string
-               "\\\\\\(.\\)" "\\1"
-               (substring command (1+ (match-beginning 1))
-                          (1- (match-end 1)))))
-             ;; Try globbing as well (bug#15417).
-             (t (let* ((substituted-dir
-                        (substitute-env-vars (match-string 1 command)))
-                       ;; FIXME: This also tries to expand `*' that were
-                       ;; introduced by the envvar expansion!
-                       (expanded-dir
-                        (file-expand-wildcards substituted-dir)))
-                  (if (= (length expanded-dir) 1)
-                      (car expanded-dir)
-                    substituted-dir)))))
-	(erase-buffer)
-	;; Select the desired mode.
-	(if (not (eq mode t))
-            (progn
-              (buffer-disable-undo)
-              (funcall mode))
-	  (setq buffer-read-only nil)
-	  (with-no-warnings (comint-mode))
-	  (compilation-shell-minor-mode))
-        ;; Remember the original dir, so we can use it when we recompile.
-        ;; default-directory' can't be used reliably for that because it may be
-        ;; affected by the special handling of "cd ...;".
-        ;; NB: must be done after (funcall mode) as that resets local variables
-        (setq-local compilation-directory thisdir)
-        (setq-local compilation-environment thisenv)
-	(if highlight-regexp
-            (setq-local compilation-highlight-regexp highlight-regexp))
-        (if (or compilation-auto-jump-to-first-error
-		(eq compilation-scroll-output 'first-error))
-            (setq-local compilation-auto-jump-to-next t))
-	;; Output a mode setter, for saving and later reloading this buffer.
-	(insert "-*- mode: " name-of-mode
-		"; default-directory: "
-                (prin1-to-string (abbreviate-file-name default-directory))
-		" -*-\n"
-		(format "%s started at %s\n\n"
-			mode-name
-			(substring (current-time-string) 0 19))
-		command "\n")
-        ;; Mark the end of the header so that we don't interpret
-        ;; anything in it as an error.
-        (put-text-property (1- (point)) (point) 'compilation-header-end t)
-	(setq thisdir default-directory))
-      (set-buffer-modified-p nil))
-    ;; Pop up the compilation buffer.
-    ;; https://lists.gnu.org/r/emacs-devel/2007-11/msg01638.html
-    (setq outwin (display-buffer outbuf '(nil (inhibit-same-window . t) (allow-no-window . t))))
-    (with-current-buffer outbuf
-      (let ((process-environment
-	     (append
-	      compilation-environment
-              (and (derived-mode-p 'comint-mode)
-                   (comint-term-environment))
-	      (list (format "INSIDE_EMACS=%s,compile" emacs-version))
-	      (copy-sequence process-environment))))
-        (setq-local compilation-arguments
-                    (list command mode name-function highlight-regexp))
-        (setq-local revert-buffer-function 'compilation-revert-buffer)
-	(and outwin
-	     ;; Forcing the window-start overrides the usual redisplay
-	     ;; feature of bringing point into view, so setting the
-	     ;; window-start to top of the buffer risks losing the
-	     ;; effect of moving point to EOB below, per
-	     ;; compilation-scroll-output, if the command is long
-	     ;; enough to push point outside of the window.  This
-	     ;; could happen, e.g., in `rgrep'.
-	     (not compilation-scroll-output)
-	     (set-window-start outwin (point-min)))
-
-	;; Position point as the user will see it.
-	(let ((desired-visible-point
-	       ;; Put it at the end if `compilation-scroll-output' is set.
-	       (if compilation-scroll-output
-		   (point-max)
-		 ;; Normally put it at the top.
-		 (point-min))))
-	  (goto-char desired-visible-point)
-	  (when (and outwin (not (eq outwin (selected-window))))
-	    (set-window-point outwin desired-visible-point)))
-
-	;; The setup function is called before compilation-set-window-height
-	;; so it can set the compilation-window-height buffer locally.
-	(if compilation-process-setup-function
-	    (funcall compilation-process-setup-function))
-	(and outwin (compilation-set-window-height outwin))
-	;; Start the compilation.
-	(if (fboundp 'make-process)
-	    (let ((proc
-		   (if (eq mode t)
-                       ;; On remote hosts, the local `shell-file-name'
-                       ;; might be useless.
-                       (with-connection-local-variables
-		        ;; comint uses `start-file-process'.
-		        (get-buffer-process
-			 (with-no-warnings
-			   (comint-exec
-			    outbuf (downcase mode-name)
-			    shell-file-name
-			    nil `(,shell-command-switch ,command)))))
-		     (start-file-process-shell-command (downcase mode-name)
-						       outbuf command))))
-              ;; Make the buffer's mode line show process state.
-              (setq mode-line-process
-                    '((:propertize ":%s" face compilation-mode-line-run)
-                      compilation-mode-line-errors))
-
-              ;; Set the process as killable without query by default.
-              ;; This allows us to start a new compilation without
-              ;; getting prompted.
-              (when compilation-always-kill
-                (set-process-query-on-exit-flag proc nil))
-
-              (set-process-sentinel proc #'compilation-sentinel)
-              (unless (eq mode t)
-                ;; Keep the comint filter, since it's needed for proper
-		;; handling of the prompts.
-		(set-process-filter proc #'compilation-filter))
-	      ;; Use (point-max) here so that output comes in
-	      ;; after the initial text,
-	      ;; regardless of where the user sees point.
-	      (set-marker (process-mark proc) (point-max) outbuf)
-	      (when compilation-disable-input
-		(condition-case nil
-		    (process-send-eof proc)
-		  ;; The process may have exited already.
-		  (error nil)))
-	      (run-hook-with-args 'compilation-start-hook proc)
-              (compilation--update-in-progress-mode-line)
-	      (push proc compilation-in-progress))
-	  ;; No asynchronous processes available.
-	  (message "Executing `%s'..." command)
-	  ;; Fake mode line display as if `start-process' were run.
-	  (setq mode-line-process
-		'((:propertize ":run" face compilation-mode-line-run)
-                  compilation-mode-line-errors))
-	  (force-mode-line-update)
-	  (sit-for 0)			; Force redisplay
-	  (save-excursion
-	    ;; Insert the output at the end, after the initial text,
-	    ;; regardless of where the user sees point.
-	    (goto-char (point-max))
-	    (let* ((inhibit-read-only t) ; call-process needs to modify outbuf
-		   (compilation-filter-start (point))
-		   (status (call-process shell-file-name nil outbuf nil "-c"
-					 command)))
-	      (run-hooks 'compilation-filter-hook)
-	      (cond ((numberp status)
-		     (compilation-handle-exit
-		      'exit status
-		      (if (zerop status)
-			  "finished\n"
-			(format "exited abnormally with code %d\n" status))))
-		    ((stringp status)
-		     (compilation-handle-exit 'signal status
-					      (concat status "\n")))
-		    (t
-		     (compilation-handle-exit 'bizarre status status)))))
-	  (set-buffer-modified-p nil)
-	  (message "Executing `%s'...done" command)))
-      ;; Now finally cd to where the shell started make/grep/...
-      (setq default-directory thisdir)
-      ;; The following form selected outwin ever since revision 1.183,
-      ;; so possibly messing up point in some other window (bug#1073).
-      ;; Moved into the scope of with-current-buffer, though still with
-      ;; complete disregard for the case when compilation-scroll-output
-      ;; equals 'first-error (martin 2008-10-04).
-      (when compilation-scroll-output
-	(goto-char (point-max))))
-
-    ;; Make it so the next C-x ` will use this buffer.
-    (setq next-error-last-buffer outbuf)))
   )
 
 ;; Some nice clever behaviour and helpers for programming pair management
 (req-package elec-pair
   :demand t
-  )
-
-(req-package gdb-mi
-  :config
-  ;; Fix for gdb-watch
-  ;;   (defun gud-watch (&optional arg event)
-  ;;     "Watch expression at point.
-  ;; With arg, enter name of variable to be watched in the minibuffer."
-  ;;     (interactive (list current-prefix-arg last-input-event))
-  ;;     (let ((minor-mode (buffer-local-value 'gud-minor-mode gud-comint-buffer)))
-  ;;       (if (eq minor-mode 'gdbmi)
-  ;;           (progn
-  ;;             (if event (posn-set-point (event-end event)))
-  ;;             (require 'tooltip)
-  ;;             (save-selected-window
-  ;;               (let ((expr
-  ;;                      (if arg
-  ;;                          (read-string "Watch Expression: ")
-  ;;                        (if (and transient-mark-mode mark-active)
-  ;;                            (buffer-substring (region-beginning) (region-end))
-  ;;                          (concat (if (derived-mode-p 'gdb-registers-mode) "$")
-  ;;                                  (tooltip-identifier-from-point (point)))))))
-  ;;                 (set 'gud-watch-expression expr)
-  ;;                 (set-text-properties 0 (length expr) nil expr)
-  ;;                 (gdb-input (concat "-var-create - * "  expr "")
-  ;;                            (lambda () (gdb-var-create-handler gud-watch-expression))))))
-  ;;         (message "gud-watch is a no-op in this mode."))))
   )
 
 (req-package org
@@ -1342,6 +1078,14 @@ variables: `beacon-mode', `beacon-dont-blink-commands',
 (req-package cuda-mode
   )
 
+(req-package dap-mode
+  :config
+  (require 'dap-lldb)
+  (setq
+   dap-lldb-debug-program '("/usr/bin/lldb-vscode")
+   )
+  )
+
 (req-package dashboard
   :config
   (dashboard-setup-startup-hook)
@@ -1447,9 +1191,14 @@ This version has been patched to avoid clobbering the keyfreq file when the lisp
 (req-package fancy-compilation
   :hook (init-setup . fancy-compilation-mode)
   :config
-  ;; Don't supress useful info
-  (setq fancy-compilation-quiet-prelude nil
-        fancy-compilation-quiet-prolog nil)
+  (setq
+   ;; Don't supress useful info
+   fancy-compilation-quiet-prelude nil
+   fancy-compilation-quiet-prolog nil
+   ;; Pointless tbh, just chokes when there are thousands of errors
+   fancy-compilation-scroll-output nil
+   fancy-compilation-override-colors t
+   )
   )
 
 (req-package fireplace
@@ -1605,7 +1354,7 @@ It is faster and alleviates no syntax highlighting"
   helm-flycheck
   helm-projectile
   helm-rg
-  helm-swoop
+  ;; helm-swoop
   :hook
   (cemacs-init-setup . helm-mode)
   (cemacs-init-setup . cemacs-helm-mode)
@@ -1884,7 +1633,10 @@ It is faster and alleviates no syntax highlighting"
     (lua-mode))
   (if (file-exists-p "/usr/bin/lua-language-server")
       (setq lsp-clients-lua-language-server-bin "/usr/bin/lua-language-server"))
+
+  (add-to-list 'flycheck-disabled-checkers 'lua-luacheck)
   )
+
 (req-package multiple-cursors
   :commands
   (mc/edit-lines
@@ -1921,6 +1673,15 @@ It is faster and alleviates no syntax highlighting"
                                #'helm-M-x
                                #'helm-confirm-and-exit-minibuffer
                                )
+  )
+
+(req-package obsidian
+  :config
+  (setq
+   global-obsidian-mode nil
+   obsidian-backlinks-mode t
+   obsidian-directory "~/userdata/org"
+   )
   )
 
 (req-package omnisharp
@@ -2131,6 +1892,8 @@ project: %S \n group: %S \n functions: %S \n locals: %S"
   )
 
 (req-package rtags
+  ;; Provided from system
+  :ensure nil
   :require
   company-rtags
   company
