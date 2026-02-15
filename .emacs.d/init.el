@@ -1067,7 +1067,7 @@ variables: `beacon-mode', `beacon-dont-blink-commands',
 (req-package csharp-mode
   :defer 5
   ;; NOTE: csharp-mode was added to emacs core in version 29
-  :ensure (< emacs-major-version 29)
+  :if (< emacs-major-version 29)
   :commands (csharp-mode)
   :require csproj-mode
   :hook
