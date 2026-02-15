@@ -195,6 +195,9 @@ configuration see `cemacs-init-local-frame'"
 
   ;; Visualize Whitespace
   (setq whitespace-style '(trailing tabs tab-mark))
+  ;; Only enable after whitespace style is set or it looks really ugly
+  (global-whitespace-mode 1)            ; visualize tab characters
+
   )
 
 (defun cemacs-init-setup()
@@ -286,7 +289,6 @@ configuration see `cemacs-init-local-frame'"
   ;; Bugs smarparens mode...
   ;; (delete-selection-mode 1)             ; delete activated region on typing
   (global-subword-mode 1)               ; treat delimited words seperately
-  (global-whitespace-mode 1)            ; visualize tab characters
 
   ;; Disabled visual-line because of a large performance penalty on long lines
   ;; (global-visual-line-mode 1)           ; make some commands to operate on visual lines
