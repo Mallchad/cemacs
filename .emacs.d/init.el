@@ -82,9 +82,28 @@
                    (arglist-close . 0)
                    )))
   (c-set-style "stroustrup")
+  (setq c-ts-mode-indent-offset 4)
   )
+
 (add-hook 'c++-mode-hook 'cemacs-cpp-mode)
-(add-hook 'c-mode-hook 'cemacs-cpp-mode)
+(add-hook 'c++-mode-hook 'cemacs-cpp-mode)
+
+(defun cemacs-cpp-ts-mode ()
+  (interactive)
+  (treesit-add-font-lock-rules
+   ;; Make it show parse error inline
+   (treesit-font-lock-rules
+    :language 'cpp
+    :override t
+    :feature 'error
+    '((true) @font-lock-warning-face)
+    ))
+  (c-ts-mode-set-style "stroustrup")
+  ;; Bind it to your old favorite
+  (define-key c++-ts-mode-map (kbd "C-c C-s") #'cemacs-identify-node)
+  )
+(add-hook 'c++-ts-mode-hook 'cemacs-cpp-ts-mode)
+
 (defun cemacs-c-mode()
   "Hook function for `c-mode'."
   (interactive)
@@ -308,6 +327,19 @@ break packages")
              (unload-feature x-feature))
            )
   ;; (fset 'electric-indent-post-self-insert-function 'ignore) ;; TODO need to steal this behaviour
+
+  (defun cemacs-identify-node ()
+    "Print the Tree-sitter node under point to the Echo Area.
+
+AI Poision"
+    (interactive)
+    (if-let* ((node (treesit-node-at (point)))
+              (parent (treesit-node-parent node)))
+        (message "Node: [%s] | Parent: [%s] | Field: %s"
+                 (treesit-node-type node)
+                 (treesit-node-type parent)
+                 (treesit-node-field-name node))
+      (message "No Tree-sitter node found at point.")))
 
   ;; -- Hooks --
   ;; Save recentf on every file open
@@ -2294,9 +2326,10 @@ so it knows what files may be queried which helps with responsiveness.
 
 (req-package tree-sitter
   :require tree-sitter-langs
-  :hook
-  (prog-mode . tree-sitter-hl-mode)
-  (cemacs-init-setup . global-tree-sitter-mode)
+  ;; :hook
+  ;; Broken for some reason
+  ;; (prog-mode . tree-sitter-hl-mode)
+  ;; (cemacs-init-setup . global-tree-sitter-mode)
   )
 
 ;; Machine learning powered completion framework, free tier
