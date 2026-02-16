@@ -1765,20 +1765,25 @@ It is faster and alleviates no syntax highlighting"
 (req-package projectile
   :require
   flycheck-projectile
-  :commands (projectile-mode)
+  ;; Pretty important package, just demand it
+  :demand t
   :hook
   (cemacs-init-setup . projectile-mode)
   (find-file . cemacs-projectile-file-setup)
   (after-revert . cemacs-projectile-file-setup) ; redo with buffer revert
   :bind
   (:map projectile-mode-map
-        (("C-x p" . projectile-command-map)))
+        (("C-x p" . projectile-command-map))
+        :map projectile-command-map
+        ( ("c s" . cemacs-projectile-compile-subproject))
+   )
   :config
 
   ;; Variables
   (setq projectile-enable-caching t
         ;; --strip-cwd-prefix only supported in newer versions of fd
-        projectile-git-fd-args "-H -0 -E .git -tf -c never"
+        ;; Enables per-project compilation buffer, really handy
+        projectile-per-project-compilation-buffer t
         )
 
   (defvar cemacs-projectile-functions
@@ -1882,7 +1887,7 @@ project: %S \n group: %S \n functions: %S \n locals: %S"
             ))))
 
   (defvar cemacs-subproject-cache nil)
-  (defun cemacs-projectile-currnet-subproject ()
+  (defun cemacs-projectile-current-subproject (&optional base-directory)
     ;; Cache
     (let ((current-project (cdr (project-current)))
           (subproject-found nil)
@@ -1926,6 +1931,22 @@ project: %S \n group: %S \n functions: %S \n locals: %S"
       subproject-name
       ))
 
+  (defun cemacs-projectile-compile-subproject (&optional arg)
+    (interactive "P")
+    ;; Override the local function to use our subproject root
+    (let ((subproject-root (cemacs-projectile-current-subproject)))
+        (cl-letf (((symbol-function 'projectile-project-root) (lambda (&optional arg)
+                                                                subproject-root))
+                  ((symbol-function 'projectile-compilation-dir) (lambda (&optional arg)
+                                                                  subproject-root))
+                  )
+          (if (and (stringp subproject-root) (file-exists-p subproject-root))
+            (progn (projectile-compile-project arg))
+            (progn (message "Tried to run compile subproject command not in a subproject directory." ))
+           )
+          ))
+    )
+
   (defvar cemacs-projectile-invalidate-cache-hooks nil)
   (defun cemacs-projectile-invalidate-cache-run-hooks (&rest args)
     (run-hooks 'cemacs-projectile-invalidate-cache-hooks)
@@ -1937,8 +1958,7 @@ project: %S \n group: %S \n functions: %S \n locals: %S"
   (add-to-list 'cemacs-projectile-invalidate-cache-hooks 'cemacs-projectile-invalidate-cache)
 
   (advice-add 'projectile-invalidate-cache :after 'cemacs-projectile-invalidate-cache-run-hooks)
-
-  )
+)
 
 (req-package rainbow-blocks
   :commands
