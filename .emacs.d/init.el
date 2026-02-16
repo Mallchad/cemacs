@@ -1880,6 +1880,64 @@ project: %S \n group: %S \n functions: %S \n locals: %S"
              cemacs-project-locals current-project-locals
              cemacs-project-functions current-group-functions)
             ))))
+
+  (defvar cemacs-subproject-cache nil)
+  (defun cemacs-projectile-currnet-subproject ()
+    ;; Cache
+    (let ((current-project (cdr (project-current)))
+          (subproject-found nil)
+          (subproject-name nil))
+      ;; Fix up any stupid elements that shouldn't be the cache
+      (mapc (lambda (arg)
+              (when (or (not (listp arg))
+                        (not (and (listp arg) (listp (cdr arg)))))
+                  (setq cemacs-subproject-cache (remove arg cemacs-subproject-cache))
+                ))
+            cemacs-subproject-cache
+            )
+      (when current-project
+        ;; No pre-existing cache
+        (when (not (seq-find (lambda (arg)
+                               ;; string= breaks if there is an trailing slash '/'
+                                (file-equal-p current-project (car arg)))
+                             cemacs-subproject-cache))
+          ;; Add subprojects into the cache
+          (push (list current-project
+                      (projectile-get-all-sub-projects current-project))
+                cemacs-subproject-cache)
+          ))
+
+      (cl-loop for x-file in
+               (nth 1
+                (seq-find
+                 (lambda (arg)
+                   ;; string= breaks if there is an trailing slash '/'
+                   (file-equal-p (car arg) current-project))
+                 cemacs-subproject-cache))
+               do
+               ;; (message (format "x file %s\n" x-file))
+               (when (when
+                         (stringp x-file) (string-match x-file (buffer-file-name)))
+                 ;; (message (format "found file %s" x-file))
+                 (setq subproject-found t
+                       subproject-name x-file))
+               )
+      ;; return
+      subproject-name
+      ))
+
+  (defvar cemacs-projectile-invalidate-cache-hooks nil)
+  (defun cemacs-projectile-invalidate-cache-run-hooks (&rest args)
+    (run-hooks 'cemacs-projectile-invalidate-cache-hooks)
+    )
+  (defun cemacs-projectile-invalidate-cache (&rest args)
+    (setq cemacs-subproject-cache nil)
+    (message "Cemacs: Deleted cemacs-subproject-cache" )
+    )
+  (add-to-list 'cemacs-projectile-invalidate-cache-hooks 'cemacs-projectile-invalidate-cache)
+
+  (advice-add 'projectile-invalidate-cache :after 'cemacs-projectile-invalidate-cache-run-hooks)
+
   )
 
 (req-package rainbow-blocks
