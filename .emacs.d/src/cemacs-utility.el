@@ -464,6 +464,8 @@ This is a slightly more safe and informative abstraction on `set'"
     )
   )
 
+(defvar cemacs-notify-on-compile-end t
+  "Send a notification using notify-send on compilation completion" )
 (defun cemacs-compilation-hook (buffer finish-type)
   "Performs several sorted compilation finished hooks
 
@@ -486,8 +488,18 @@ This is a slightly more safe and informative abstraction on `set'"
       ;; Buffer is onscreen
       (when compilation-window
         (set-window-point compilation-window new-point))
-      ))
-  )
+      )
+
+    ;; Send a notification on possible on compile end
+    (when cemacs-notify-on-compile-end
+      (start-process "cemacs-compile-notification" nil "notify-send"
+                     (format "Compilation finished with status: %s \nCompile Buffer: %s"
+                             finish-type buffer)
+                     "--hint=int:resident:1"
+                     "--app-name=emacs"
+                     "--expire-time=10000"
+                     ) )
+    ))
 
 (defun cemacs-jump-to-register-other-window ( register &optional delete )
   "Same as jump-to-register but changes to the other window first.
