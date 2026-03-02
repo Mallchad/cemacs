@@ -473,8 +473,15 @@ This is a slightly more safe and informative abstraction on `set'"
 - Goto end of compilation buffer"
   (let ((compilation-window (get-buffer-window buffer))
         (new-point nil)
-        (error-found nil))
+        (error-found nil)
+        (execution-time 0))
     (with-current-buffer buffer
+      ;; Calculation execution time
+      (when (numberp compilation--start-time)
+        (setq execution-time (- (car (time-convert (current-time) 1))
+                                compilation--start-time))
+        )
+
       ;; Covers case where for some reason the compilation buffer is offscreen
       ;; This will set display the location to the buffer's point and not mangle it
       (setq-local switch-to-buffer-preserve-window-point nil)
@@ -493,8 +500,11 @@ This is a slightly more safe and informative abstraction on `set'"
     ;; Send a notification on possible on compile end
     (when cemacs-notify-on-compile-end
       (start-process "cemacs-compile-notification" nil "notify-send"
-                     (format "Compilation finished with status: %s \nCompile Buffer: %s"
-                             finish-type buffer)
+                     ;; Summary
+                     (format "Compilation finished with status: %s" finish-type)
+                     ;; Body
+                     (format "Compile Buffer: %s \nExecution Time: %f"
+                             buffer execution-time)
                      "--hint=int:resident:1"
                      "--app-name=emacs"
                      "--expire-time=10000"
