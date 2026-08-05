@@ -508,6 +508,8 @@ This is a slightly more safe and informative abstraction on `set'"
                      "--hint=int:resident:1"
                      "--app-name=emacs"
                      "--expire-time=10000"
+                     ;; Hint primarily meant for KDE Plasma 6
+                     "--hint" "string:sound-file:/usr/share/sounds/ocean/stereo/power-plug.oga"
                      ) )
     ))
 
