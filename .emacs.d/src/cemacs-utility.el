@@ -474,7 +474,8 @@ This is a slightly more safe and informative abstraction on `set'"
   (let ((compilation-window (get-buffer-window buffer))
         (new-point nil)
         (error-found nil)
-        (execution-time 0))
+        (execution-time 0)
+        (notification-sound nil))
     (with-current-buffer buffer
       ;; Calculation execution time
       (when (numberp compilation--start-time)
@@ -497,6 +498,14 @@ This is a slightly more safe and informative abstraction on `set'"
         (set-window-point compilation-window new-point))
       )
 
+    ;; Set notification sound based on finish type
+    (if (string-match "abnormally" finish-type)
+        (setq notification-sound "/usr/share/sounds/ocean/stereo/power-unplug.oga")
+      ;; else
+      (setq notification-sound "/usr/share/sounds/ocean/stereo/power-plug.oga"))
+    (message finish-type)
+
+
     ;; Send a notification on possible on compile end
     (when cemacs-notify-on-compile-end
       (start-process "cemacs-compile-notification" nil "notify-send"
@@ -509,7 +518,7 @@ This is a slightly more safe and informative abstraction on `set'"
                      "--app-name=emacs"
                      "--expire-time=10000"
                      ;; Hint primarily meant for KDE Plasma 6
-                     "--hint" "string:sound-file:/usr/share/sounds/ocean/stereo/power-plug.oga"
+                     "--hint" (concat "string:sound-file:" notification-sound)
                      ) )
     ))
 
