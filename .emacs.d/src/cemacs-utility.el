@@ -540,5 +540,65 @@ Additionally pushes the mark so you can cycle the buffer back with `pop-global-m
   (push-mark-command nil)
   )
 
+(defvar cemacs-command-socket nil
+  "process storage variable")
+(defvar cemacs-command-socket-filename "/home/mallchad/tmp/cemacs-command.sock"
+  "Where to put the command socket" )
+
+(defun cemacs-socket-filter (proccess payload)
+  (message "socket_message: %s"  payload)
+  (let ((data-list (split-string payload))
+        (command)
+        (line)
+        (column)
+        (filename)
+        )
+    (when (string= "visit_file" (nth 0 data-list))
+      (message "visit_file command triggered" )
+      (setq line (1- (car (read-from-string (nth 1 data-list))))
+            column (1- (car (read-from-string (nth 2 data-list))))
+            filename (nth 3 data-list))
+      (find-file filename)
+
+      ;; Reset position so we have a good relative basis
+      (goto-char 0)
+      (forward-line line)
+      (move-to-column column)
+      ;; Not sure raise-frame is needed
+      ;; (raise-frame)
+      (select-frame-set-input-focus (window-frame))
+      (message "moved to %d %d in file %s" line column filename)
+      )
+    )
+  )
+
+(defun cemacs-socket-sentinel (proccess event)
+  "Event callback receiver"
+  (message "socket_event sentinel: %s" event)
+  )
+
+(defun cemacs-command-socket-start ()
+  ;; Delete and stop old service is available
+  (when (processp cemacs-command-socket)
+    (stop-process cemacs-command-socket)
+    ;; Clear old value
+    (setq cemacs-command-socket nil)
+    )
+  (delete-file cemacs-command-socket-filename)
+
+  ;; Start actual process
+  (setq cemacs-command-socket
+        (make-network-process
+         :name "cemacs-command-socket"
+         :service cemacs-command-socket-filename
+         :family 'local
+         :server t
+         :filter #'cemacs-socket-filter
+         :sentinel #'cemacs-socket-sentinel
+         ))
+
+  )
+
+
 (provide 'cemacs-utility)
 ;;; cemacs-utility.el ends here
